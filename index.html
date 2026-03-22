@@ -1605,30 +1605,21 @@ function sendLeadToN8N(payload, label){
   var body = JSON.stringify(payload || {});
   var tag = label || 'Lead';
 
-  // Beacon evita bloqueos al navegar/cerrar y reduce problemas de CORS en envios one-way.
-  try {
-    if (navigator.sendBeacon) {
-      var blob = new Blob([body], { type: 'text/plain;charset=UTF-8' });
-      var sent = navigator.sendBeacon(N8N_WEBHOOK_URL, blob);
-      if (sent) {
-        console.log(tag + ' enviado a n8n (beacon)');
-        return;
-      }
-    }
-  } catch (e) {
-    console.warn('Beacon no disponible:', e);
-  }
-
+  // fetch con application/json para que n8n parsee cada campo por separado
   fetch(N8N_WEBHOOK_URL, {
     method: 'POST',
-    mode: 'no-cors',
-    keepalive: true,
-    headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+    headers: { 'Content-Type': 'application/json' },
     body: body
   }).then(function(){
-    console.log(tag + ' enviado a n8n (fetch)');
+    console.log(tag + ' enviado a n8n');
   }).catch(function(err){
-    console.warn('Error webhook:', err);
+    console.warn('Error webhook n8n:', err);
+    // Fallback: beacon (solo si fetch falla, p.ej. sin conexion momentanea)
+    try {
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(N8N_WEBHOOK_URL, new Blob([body], { type: 'application/json' }));
+      }
+    } catch(e) {}
   });
 }
 
